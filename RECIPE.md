@@ -17,8 +17,8 @@ The preview is a 2× screenshot of the work area. The highlighted rectangle at t
 ## How it behaves
 
 - On init the mod reads the active space's machine (`spaces().find(s => s.active)?.machine ?? null`) and starts a 2s stats timer and a 5s ping timer. Switching spaces re-probes immediately; sequence counters discard results from the previous machine.
-- Stats run `sh -c "$STATS_PROBE"` on the active machine. On Windows the probe uses `powershell.exe` and `Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor` for CPU and `Win32_OperatingSystem` for total/free memory, then `df -Pk` on `%SYSTEMDRIVE%`. Elsewhere it reads `/proc/loadavg` (or `sysctl vm.loadavg`), `nproc`, `free -b` (or `sysctl hw.memsize` + `vm_stat`), and `df -Pk /`.
-- CPU is the Windows `PercentProcessorTime` total, or load average divided by CPU count elsewhere. MEM is used / total. DISK is used / (used + free) of the root filesystem or system drive. Each is rounded to a whole percent.
+- Stats run `sh -c "$STATS_PROBE"` on the active machine. On Windows the probe uses `powershell.exe` and `Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor` for CPU and `Win32_OperatingSystem` for total/free memory, then `df -Pk` on `%SYSTEMDRIVE%`. Elsewhere it reads `/proc/loadavg` (or `sysctl vm.loadavg`), `nproc`, `free -b` (or `sysctl hw.memsize` + `vm_stat`), and `df -Pk /`, or `df -Pk /System/Volumes/Data` on macOS, where `/` is the sealed system volume.
+- CPU is the Windows `PercentProcessorTime` total, or load average divided by CPU count elsewhere. MEM is used / total. DISK is used / (used + free) of the root filesystem, macOS Data volume or system drive. Each is rounded to a whole percent.
 - Ping: the local machine pings `127.0.0.1`. For a remote machine the mod asks `hc(["machine", "ls", "--json"])` for a direct target, resolves it with `ssh -G` (using the `hostname` line), and runs `ping` with platform-specific flags from `ping.js` (`-n 1 -w 1500` on Windows, `-c 1 -W 1000` on Linux, `-c 1 -W 1500` on macOS). If no host resolves or `ping` fails, it falls back to timing a no-op `sh -c ":"` round-trip on that machine.
 - If the machine is known to the app as `layout: "unavailable"`, the bar shows the offline state without running a probe. Probe failures show dashes and keep the error in the tooltip until the next tick. There is no history graph, per-core detail, or click action.
 
@@ -55,7 +55,7 @@ The preview is a 2× screenshot of the work area. The highlighted rectangle at t
 - Remote stats require the machine to be reachable through Herdr. Machines reached through a jump host (`via`) are treated as not directly pingable; those fall back to the no-op round-trip.
 - Ping is ICMP; firewalls and containers can block it even when SSH works. The fallback round-trip is a transport estimate, not a true ICMP latency.
 - The first reading after launch or a space switch can take a second; the bar shows dashes until the probe returns. Errors are not retried faster than the 2s / 5s timers.
-- The thresholds and wording are fixed in `main.js`; there are no settings. The disk value is the root filesystem only, not every mount.
+- The thresholds and wording are fixed in `main.js`; there are no settings. The disk value is one volume only (the root filesystem, or the Data volume on macOS), not every mount.
 
 ## Done when
 
