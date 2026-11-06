@@ -15,7 +15,8 @@ case "$os" in
     echo "cpus=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
     if command -v free >/dev/null 2>&1; then free -b | awk '/^Mem:/{print "mem="$2" "$7}'
     elif command -v vm_stat >/dev/null 2>&1; then echo "mem=$(sysctl -n hw.memsize) $(vm_stat | awk '/page size of/{ps=$8} /Pages free/{f=$3} /Pages inactive/{i=$3} /Pages speculative/{s=$3} END{print (f+i+s)*ps}')"; fi
-    df -Pk / | awk 'NR==2{print "disk="$2" "$3" "$4}'
+    root=/; [ -d /System/Volumes/Data ] && root=/System/Volumes/Data
+    df -Pk "$root" | awk 'NR==2{print "disk="$2" "$3" "$4}'
     ;;
 esac
 `;
